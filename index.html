@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trafix - Point Earnings</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: white;
+            color: black;
+        }
+        header {
+            padding: 1em;
+            text-align: center;
+            background-color: black;
+            color: white;
+        }
+        .container {
+            padding: 20px;
+        }
+        .points-section {
+            text-align: center;
+            margin-top: 20px;
+        }
+        button {
+            background-color: black;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: gray;
+        }
+        footer {
+            text-align: center;
+            padding: 10px;
+            background-color: black;
+            color: white;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Trafix - Point Earnings</h1>
+</header>
+
+<div class="container">
+    <div class="points-section">
+        <h3>Your Current Points: <span id="current-points">0</span></h3>
+        <button onclick="startTracking()">Start Tracking Travel</button>
+        <button onclick="stopTracking()">Stop Tracking Travel</button>
+        <button onclick="resetPoints()">Reset Points</button>
+    </div>
+</div>
+
+<footer>
+    <p>Trafix App</p>
+</footer>
+
+<script>
+    let currentPoints = 0; // Tracks user points
+    let totalDistance = 0; // Tracks total distance traveled
+    let watchId = null; // For Geolocation tracking
+    let lastPosition = null; // To store the last GPS coordinates
+
+    // Calculate distance between two coordinates in kilometers
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371; // Radius of the Earth in km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    // Start tracking travel
+    function startTracking() {
+        if (navigator.geolocation) {
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    if (lastPosition) {
+                        const distance = calculateDistance(
+                            lastPosition.latitude,
+                            lastPosition.longitude,
+                            latitude,
+                            longitude
+                        );
+                        totalDistance += distance;
+                        if (totalDistance >= 1) {
+                            const pointsEarned = Math.floor(totalDistance); // Points for whole kilometers
+                            currentPoints += pointsEarned;
+                            totalDistance -= pointsEarned; // Retain leftover distance
+                            updatePoints();
+                            alert(`You traveled ${pointsEarned} km and earned ${pointsEarned} points!`);
+                        }
+                    }
+                    lastPosition = { latitude, longitude };
+                },
+                (error) => {
+                    console.error("Error getting position:", error);
+                },
+                { enableHighAccuracy: true }
+            );
+            alert("Travel tracking started. Make sure to move at least 1km to earn points.");
+        } else {
+            alert("Geolocation is not supported by your browser.");
+        }
+    }
+
+    // Stop tracking travel
+    function stopTracking() {
+        if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+            lastPosition = null;
+            totalDistance = 0; // Reset distance calculation
+            alert("Travel tracking stopped.");
+        }
+    }
+
+    // Reset points
+    function resetPoints() {
+        currentPoints = 0;
+        totalDistance = 0;
+        updatePoints();
+        alert("Points have been reset to 0.");
+    }
+
+    // Update points on the screen
+    function updatePoints() {
+        document.getElementById('current-points').innerText = currentPoints;
+        localStorage.setItem('trafixPoints', currentPoints);
+    }
+
+    // Load points from local storage on page load
+    window.onload = function () {
+        const savedPoints = localStorage.getItem('trafixPoints');
+        if (savedPoints) {
+            currentPoints = parseInt(savedPoints, 10);
+            updatePoints();
+        }
+    };
+</script>
+
+</body>
+</html>
